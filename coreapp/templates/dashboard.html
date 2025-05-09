@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RangerNode Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="background-color:black; color:lime; font-family:monospace;">
+    <h1>RangerNode Live Telemetry</h1>
+
+    <canvas id="rpmChart" width="600" height="200"></canvas>
+    <canvas id="coolantChart" width="600" height="200"></canvas>
+    <canvas id="fuelChart" width="600" height="200"></canvas>
+
+    <script>
+        let rpmChart, coolantChart, fuelChart;
+
+        async function fetchAndUpdate() {
+            const res = await fetch("/data");
+            const data = await res.json();
+
+            const labels = data.map(d => d.timestamp.substring(11, 16)); // HH:MM
+            const rpm = data.map(d => d.rpm);
+            const coolant = data.map(d => d.coolant_temp_c);
+            const fuel = data.map(d => d.fuel_level_pct);
+
+            function updateChart(chart, label, values, color) {
+                if (!chart) {
+                    return new Chart(document.getElementById(label + "Chart"), {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{ label: label, data: values, borderColor: color, tension: 0.2 }]
+                        },
+                        options: {
+                            scales: {
+                                x: { ticks: { color: color } },
+                                y: { ticks: { color: color } }
+                            },
+                            plugins: {
+                                legend: { labels: { color: color } }
+                            }
+                        }
+                    });
+                } else {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = values;
+                    chart.update();
+                    return chart;
+                }
+            }
+
+            rpmChart = updateChart(rpmChart, "rpm", rpm, "lime");
+            coolantChart = updateChart(coolantChart, "coolant", coolant, "cyan");
+            fuelChart = updateChart(fuelChart, "fuel", fuel, "yellow");
+
+        }
+
+        window.onload = () => {
+            fetchAndUpdate();
+            setInterval(fetchAndUpdate, 5000);
+        }
+    </script>
+</body>
+</html>
